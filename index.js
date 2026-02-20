@@ -16,6 +16,12 @@ client.once("ready", () => {
 
 // مثال command ping
 client.on("messageCreate", message => {
+  if (message.author.bot) return;
+
+  if (message.content === "+message") {
+    message.channel.send("مرحبا 👋 هذا مساج من البوت متاعك");
+  }
+
   if (message.content === "ping") {
     message.reply("pong 🏓");
   }
