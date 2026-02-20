@@ -33,4 +33,4 @@ app.listen(3000, () => {
 });
 
 // تسجيل الدخول
-client.login(process.env.TOKEN);
+client.login("MTQ3NDQ4OTYzODkzMTY2MTAyMQ.G6_rHo.FT41yFclfPdbhpdss9SWOYqIjTEh9_QReZG-y8");
