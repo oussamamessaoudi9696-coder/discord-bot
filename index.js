@@ -14,24 +14,20 @@ client.once("ready", () => {
   console.log(`Logged in as ${client.user.tag}`);
 });
 
-client.on("messageCreate", message => {
+client.on("messageCreate", async message => {
   if (message.author.bot) return;
 
-  // command +message
   if (message.content.startsWith("+message")) {
 
     const args = message.content.slice(8).trim();
 
-    if (!args) {
-      return message.channel.send("اكتب message بعد +message");
-    }
+    if (!args) return;
 
+    // يمسح المساج متاعك
+    await message.delete().catch(() => {});
+
+    // يبعث المساج بالبـوت
     message.channel.send(args);
-  }
-
-  // ping test
-  if (message.content === "ping") {
-    message.reply("pong 🏓");
   }
 });
 
