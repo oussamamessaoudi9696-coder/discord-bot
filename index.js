@@ -15,20 +15,21 @@ client.once("ready", () => {
 });
 
 client.on("messageCreate", async message => {
+
   if (message.author.bot) return;
 
+  // command +message
   if (message.content.startsWith("+message")) {
 
     const args = message.content.slice(8).trim();
 
     if (!args) return;
 
-    // يمسح المساج متاعك
     await message.delete().catch(() => {});
 
-    // يبعث المساج بالبـوت
-    message.channel.send(args);
+    await message.channel.send(args);
   }
+
 });
 
 // تشغيل Web Server باش Render ما يطيحوش
