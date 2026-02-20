@@ -14,14 +14,22 @@ client.once("ready", () => {
   console.log(`Logged in as ${client.user.tag}`);
 });
 
-// مثال command ping
 client.on("messageCreate", message => {
   if (message.author.bot) return;
 
-  if (message.content === "+message") {
-    message.channel.send("مرحبا 👋 هذا مساج من البوت متاعك");
+  // command +message
+  if (message.content.startsWith("+message")) {
+
+    const args = message.content.slice(8).trim();
+
+    if (!args) {
+      return message.channel.send("اكتب message بعد +message");
+    }
+
+    message.channel.send(args);
   }
 
+  // ping test
   if (message.content === "ping") {
     message.reply("pong 🏓");
   }
