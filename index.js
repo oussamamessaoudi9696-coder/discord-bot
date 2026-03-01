@@ -58,20 +58,29 @@ client.on("messageCreate", async (message) => {
 
     // 🎫 Ticket Panel
     if (message.content === "!ticketpanel") {
-        if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator))
-            return message.reply("❌ Admin only");
 
-        const button = new ButtonBuilder()
-            .setCustomId("create_ticket")
-            .setLabel("🎫 Open Ticket")
-            .setStyle(ButtonStyle.Primary);
+if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator))
+return message.reply("❌ Admin only");
 
-        const row = new ActionRowBuilder().addComponents(button);
+const embed = new EmbedBuilder()
+.setColor("#00ff99")
+.setTitle("🎫 Gaming Community Support")
+.setDescription("اضغط على الزر بالأسفل لفتح تذكرة دعم.\n\n🛠 فريقنا سيرد عليك في أقرب وقت.")
+.setImage("https://i.postimg.cc/6p0wgRRD/1771638238407.png") // <-- عوضها باللينك متاع imgur
+.setFooter({ text: "Gaming Community © 2026" })
+.setTimestamp();
 
-        return message.channel.send({
-            content: "اضغط باش تحل تيكت 🎫",
-            components: [row]
-        });
+const button = new ButtonBuilder()
+.setCustomId("create_ticket")
+.setLabel("🎟 Open Ticket")
+.setStyle(ButtonStyle.Success);
+
+const row = new ActionRowBuilder().addComponents(button);
+
+message.channel.send({
+embeds: [embed],
+components: [row]
+});
     }
 
     // 💬 كوموند القديمة +message
