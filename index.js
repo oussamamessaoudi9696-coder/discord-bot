@@ -65,7 +65,7 @@ return message.reply("❌ Admin only");
 const embed = new EmbedBuilder()
 .setColor("#00ff99")
 .setTitle("🎫 Gaming Community Support")
-.setDescription("اضغط على الزر بالأسفل لفتح تذكرة دعم.\n\n🛠 فريقنا سيرد عليك في أقرب وقت.")
+.setDescription("اضغط على الزر بالأسفل لفتح تذكرة دعم.\n\n🛠 Mr7ba bik 5oya ❤.")
 .setImage("https://i.postimg.cc/6p0wgRRD/1771638238407.png") // <-- عوضها باللينك متاع imgur
 .setFooter({ text: "Gaming Community © 2026" })
 .setTimestamp();
