@@ -72,7 +72,7 @@ const embed = new EmbedBuilder()
 
 const button = new ButtonBuilder()
 .setCustomId("create_ticket")
-.setLabel("🎟 Open Ticket")
+.setLabel("📩 Open Ticket")
 .setStyle(ButtonStyle.Success);
 
 const row = new ActionRowBuilder().addComponents(button);
