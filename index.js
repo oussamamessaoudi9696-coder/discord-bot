@@ -57,7 +57,7 @@ client.on("messageCreate", async (message) => {
     }
 
     // 🎫 Ticket Panel
-    if (message.content ="/ticketpanel") {
+    if (message.content ="!ticketpanel") {
 
 if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator))
 return message.reply("❌ Admin only");
