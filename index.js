@@ -100,7 +100,7 @@ components: [row]
                 name: message.guild.name,
                 iconURL: message.guild.iconURL()
             })
-            .setTitle("📢 إعلان جديد")
+            .setTitle("📢")
             .setDescription(args)
             .setThumbnail(message.author.displayAvatarURL())
             .setFooter({
