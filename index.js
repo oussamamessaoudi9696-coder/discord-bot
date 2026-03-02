@@ -159,46 +159,102 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
-/* ================= LOGS SYSTEM ================= */
+/* ================= LOGS SYSTEM (EMBED PRO) ================= */
 
-// Join
+// JOIN
 client.on("guildMemberAdd", member => {
   const channel = member.guild.channels.cache.find(c => c.name === "join-players-logs");
   if (!channel) return;
-  channel.send(`🟢 Member Joined: ${member.user.tag}`);
+
+  const embed = new EmbedBuilder()
+    .setColor("#00ff00")
+    .setTitle("🟢 Member Joined")
+    .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
+    .addFields(
+      { name: "👤 User", value: `<@${member.id}>`, inline: true },
+      { name: "🆔 ID", value: member.id, inline: true },
+    )
+    .setTimestamp();
+
+  channel.send({ embeds: [embed] });
 });
 
-// Leave
+// LEAVE
 client.on("guildMemberRemove", member => {
   const channel = member.guild.channels.cache.find(c => c.name === "left-player-logs");
   if (!channel) return;
-  channel.send(`🔴 Member Left: ${member.user.tag}`);
+
+  const embed = new EmbedBuilder()
+    .setColor("#ff0000")
+    .setTitle("🔴 Member Left")
+    .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
+    .addFields(
+      { name: "👤 User", value: `<@${member.id}>`, inline: true },
+      { name: "🆔 ID", value: member.id, inline: true },
+    )
+    .setTimestamp();
+
+  channel.send({ embeds: [embed] });
 });
 
-// Ban
+// BAN
 client.on("guildBanAdd", ban => {
   const channel = ban.guild.channels.cache.find(c => c.name === "ban-logs");
   if (!channel) return;
-  channel.send(`🔨 User Banned: ${ban.user.tag}`);
+
+  const embed = new EmbedBuilder()
+    .setColor("#8B0000")
+    .setTitle("🔨 User Banned")
+    .setThumbnail(ban.user.displayAvatarURL({ dynamic: true }))
+    .addFields(
+      { name: "👤 User", value: `<@${ban.user.id}>`, inline: true },
+      { name: "🆔 ID", value: ban.user.id, inline: true },
+    )
+    .setTimestamp();
+
+  channel.send({ embeds: [embed] });
 });
 
-// Unban
+// UNBAN
 client.on("guildBanRemove", ban => {
   const channel = ban.guild.channels.cache.find(c => c.name === "unban-logs");
   if (!channel) return;
-  channel.send(`🔓 User Unbanned: ${ban.user.tag}`);
+
+  const embed = new EmbedBuilder()
+    .setColor("#00ffcc")
+    .setTitle("♻️ User Unbanned")
+    .setThumbnail(ban.user.displayAvatarURL({ dynamic: true }))
+    .addFields(
+      { name: "👤 User", value: `<@${ban.user.id}>`, inline: true },
+      { name: "🆔 ID", value: ban.user.id, inline: true },
+    )
+    .setTimestamp();
+
+  channel.send({ embeds: [embed] });
 });
 
-// Timeout
+// TIMEOUT
 client.on("guildMemberUpdate", (oldMember, newMember) => {
   if (!oldMember.communicationDisabledUntil && newMember.communicationDisabledUntil) {
+
     const channel = newMember.guild.channels.cache.find(c => c.name === "timeout-logs");
     if (!channel) return;
-    channel.send(`⏳ User Timed Out: ${newMember.user.tag}`);
+
+    const embed = new EmbedBuilder()
+      .setColor("#ff9900")
+      .setTitle("⏳ User Timed Out")
+      .setThumbnail(newMember.user.displayAvatarURL({ dynamic: true }))
+      .addFields(
+        { name: "👤 User", value: `<@${newMember.id}>`, inline: true },
+        { name: "🆔 ID", value: newMember.id, inline: true },
+      )
+      .setTimestamp();
+
+    channel.send({ embeds: [embed] });
   }
 });
 
-// Kick
+// KICK
 client.on("guildMemberRemove", async member => {
   const logs = await member.guild.fetchAuditLogs({
     limit: 1,
@@ -207,14 +263,22 @@ client.on("guildMemberRemove", async member => {
 
   const log = logs.entries.first();
   if (!log) return;
-
-  const { executor, target } = log;
-  if (target.id !== member.id) return;
+  if (log.target.id !== member.id) return;
 
   const channel = member.guild.channels.cache.find(c => c.name === "kick-logs");
   if (!channel) return;
 
-  channel.send(`👢 User Kicked: ${member.user.tag} | By: ${executor.tag}`);
+  const embed = new EmbedBuilder()
+    .setColor("#ffaa00")
+    .setTitle("👢 User Kicked")
+    .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
+    .addFields(
+      { name: "👤 User", value: `<@${member.id}>`, inline: true },
+      { name: "👮 By", value: `<@${log.executor.id}>`, inline: true },
+    )
+    .setTimestamp();
+
+  channel.send({ embeds: [embed] });
 });
 
 /* ================= WEB SERVER ================= */
