@@ -191,22 +191,28 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
     panelChannel.send({ embeds: [embed], components: [row] });
   }
 
-  // DELETE PRIVATE VOICE IF EMPTY
+  // DELETE PRIVATE VOICE IF EMPTY (POWER FIX)
+
 if (oldState.channel) {
 
   const channel = oldState.channel;
 
-  // كان الروم معمول من السيستام متاعنا
-  if (voiceOwners.has(channel.id)) {
+  // ما يمسحش Generator
+  if (channel.name === "Generator") return;
 
-    // نستنى ثانية صغيرة باش يتأكد اللي ماعادش فيه حتى حد
-    setTimeout(() => {
-      if (channel.members.size === 0) {
-        channel.delete().catch(() => {});
-        voiceOwners.delete(channel.id);
-      }
-    }, 1000);
+  // كان الروم تحت نفس الكاتيجوري متاع Generator
+  const generatorChannel = oldState.guild.channels.cache.find(
+    c => c.name === "Generator"
+  );
 
+  if (!generatorChannel) return;
+
+  if (
+    channel.parentId === generatorChannel.parentId &&
+    channel.type === ChannelType.GuildVoice &&
+    channel.members.size === 0
+  ) {
+    channel.delete().catch(() => {});
   }
 }
 });
