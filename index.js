@@ -190,7 +190,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
 
     panelChannel.send({ embeds: [embed], components: [row] });
   }
-
+  
   // DELETE PRIVATE VOICE IF EMPTY (RELIABLE)
 client.on("voiceStateUpdate", async (oldState, newState) => {
 
@@ -211,7 +211,6 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
         }
       }, 500);
     }
-  }
 
 });
 
