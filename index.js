@@ -153,7 +153,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
     await newState.member.voice.setChannel(channel);
   }
 
-  // حذف الرومات الخاصة فقط
+  // حذف فقط الرومات اللي عملهم البوت
   if (oldState.channel && voiceOwners.has(oldState.channel.id)) {
     setTimeout(() => {
       if (oldState.channel.members.size === 0) {
@@ -167,31 +167,50 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
 /* ================= LOG SYSTEM ================= */
 
 function getLogChannel(guild, name) {
-  return guild.channels.cache.find(c => c.name === name);
+  return guild.channels.cache.find(
+    c => c.name.toLowerCase() === name.toLowerCase()
+  );
 }
 
 /* JOIN */
 client.on("guildMemberAdd", member => {
-  const ch = getLogChannel(member.guild, "Join-Players-Logs");
+  const ch = getLogChannel(member.guild, "join-players-logs");
   if (!ch) return;
 
   const embed = new EmbedBuilder()
     .setColor("Green")
     .setTitle("🟢 Player Joined")
-    .setThumbnail(member.user.displayAvatarURL())
-    .addFields(
-      { name: "User", value: member.user.tag },
-      { name: "ID", value: member.id }
-    )
+    .addFields({ name: "User", value: member.user.tag })
     .setTimestamp();
 
   ch.send({ embeds: [embed] });
 });
 
-/* LEAVE */
-client.on("guildMemberRemove", member => {
-  const ch = getLogChannel(member.guild, "Left-Player-Logs");
-  if (!ch) return;
+/* LEAVE + KICK */
+client.on("guildMemberRemove", async member => {
+
+  const logs = await member.guild.fetchAuditLogs({ limit: 1, type: AuditLogEvent.MemberKick }).catch(()=>{});
+  const log = logs?.entries.first();
+
+  if (log && log.target.id === member.id && Date.now() - log.createdTimestamp < 5000) {
+
+    const kickChannel = getLogChannel(member.guild, "kick-logs");
+    if (!kickChannel) return;
+
+    const embed = new EmbedBuilder()
+      .setColor("Orange")
+      .setTitle("🔨 Member Kicked")
+      .addFields(
+        { name: "User", value: member.user.tag },
+        { name: "By", value: log.executor.tag }
+      )
+      .setTimestamp();
+
+    return kickChannel.send({ embeds: [embed] });
+  }
+
+  const leaveChannel = getLogChannel(member.guild, "left-player-logs");
+  if (!leaveChannel) return;
 
   const embed = new EmbedBuilder()
     .setColor("Red")
@@ -199,12 +218,12 @@ client.on("guildMemberRemove", member => {
     .addFields({ name: "User", value: member.user.tag })
     .setTimestamp();
 
-  ch.send({ embeds: [embed] });
+  leaveChannel.send({ embeds: [embed] });
 });
 
 /* BAN */
-client.on("guildBanAdd", ban => {
-  const ch = getLogChannel(ban.guild, "Ban-Logs");
+client.on("guildBanAdd", async ban => {
+  const ch = getLogChannel(ban.guild, "ban-logs");
   if (!ch) return;
 
   const embed = new EmbedBuilder()
@@ -218,7 +237,7 @@ client.on("guildBanAdd", ban => {
 
 /* UNBAN */
 client.on("guildBanRemove", ban => {
-  const ch = getLogChannel(ban.guild, "Unban-Logs");
+  const ch = getLogChannel(ban.guild, "unban-logs");
   if (!ch) return;
 
   const embed = new EmbedBuilder()
@@ -229,6 +248,26 @@ client.on("guildBanRemove", ban => {
 
   ch.send({ embeds: [embed] });
 });
+
+/* TIMEOUT */
+client.on("guildMemberUpdate", async (oldMember, newMember) => {
+
+  if (oldMember.communicationDisabledUntil === newMember.communicationDisabledUntil) return;
+  if (!newMember.communicationDisabledUntil) return;
+
+  const ch = getLogChannel(newMember.guild, "timeout-logs");
+  if (!ch) return;
+
+  const embed = new EmbedBuilder()
+    .setColor("Purple")
+    .setTitle("⏳ Member Timed Out")
+    .addFields({ name: "User", value: newMember.user.tag })
+    .setTimestamp();
+
+  ch.send({ embeds: [embed] });
+});
+
+/* ================= WEB SERVER ================= */
 
 const app = express();
 app.get("/", (req, res) => res.send("Bot is alive!"));
