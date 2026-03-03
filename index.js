@@ -18,11 +18,13 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildModeration
+    GatewayIntentBits.GuildModeration,
+    GatewayIntentBits.GuildVoiceStates // ✅ مضافة
   ]
 });
 
 const spamMap = new Map();
+const voiceOwners = new Map(); // ✅ مضافة
 
 client.once("ready", () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
@@ -33,7 +35,6 @@ client.once("ready", () => {
 client.on("messageCreate", async (message) => {
   if (!message.guild || message.author.bot) return;
 
-  // Anti Link
   if (message.content.includes("http")) {
     if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
       await message.delete().catch(() => {});
@@ -41,7 +42,6 @@ client.on("messageCreate", async (message) => {
     }
   }
 
-  // Anti Spam
   const userData = spamMap.get(message.author.id) || { count: 0 };
   userData.count++;
   spamMap.set(message.author.id, userData);
@@ -100,12 +100,11 @@ client.on("messageCreate", async (message) => {
   }
 });
 
-/* ================= BUTTON INTERACTION ================= */
+/* ================= TICKET BUTTONS ================= */
 
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isButton()) return;
 
-  // CREATE TICKET
   if (interaction.customId === "create_ticket") {
     const existing = interaction.guild.channels.cache.find(
       c => c.name === `ticket-${interaction.user.id}`
@@ -145,12 +144,8 @@ client.on("interactionCreate", async (interaction) => {
     });
 
     interaction.reply({ content: "✅ تم إنشاء التذكرة", ephemeral: true });
-
-    const log = interaction.guild.channels.cache.find(c => c.name === "join-players-logs");
-    if (log) log.send(`🎫 Ticket opened by ${interaction.user.tag}`);
   }
 
-  // CLOSE TICKET
   if (interaction.customId === "close_ticket") {
     await interaction.reply("🔒 سيتم غلق التذكرة بعد 5 ثواني...");
     setTimeout(() => {
@@ -159,126 +154,92 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
-/* ================= LOGS SYSTEM (EMBED PRO) ================= */
+/* ================= VOICE GENERATOR SYSTEM ================= */
 
-// JOIN
-client.on("guildMemberAdd", member => {
-  const channel = member.guild.channels.cache.find(c => c.name === "join-players-logs");
-  if (!channel) return;
+client.on("voiceStateUpdate", async (oldState, newState) => {
+  if (!newState.channel) return;
 
-  const embed = new EmbedBuilder()
-    .setColor("#00ff00")
-    .setTitle("🟢 Member Joined")
-    .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
-    .addFields(
-      { name: "👤 User", value: `<@${member.id}>`, inline: true },
-      { name: "🆔 ID", value: member.id, inline: true },
-    )
-    .setTimestamp();
+  if (newState.channel.name === "Generator") {
 
-  channel.send({ embeds: [embed] });
-});
+    const channel = await newState.guild.channels.create({
+      name: `🎤 ${newState.member.user.username}`,
+      type: ChannelType.GuildVoice,
+      parent: newState.channel.parent
+    });
 
-// LEAVE
-client.on("guildMemberRemove", member => {
-  const channel = member.guild.channels.cache.find(c => c.name === "left-player-logs");
-  if (!channel) return;
+    voiceOwners.set(channel.id, newState.member.id);
+    await newState.member.voice.setChannel(channel);
 
-  const embed = new EmbedBuilder()
-    .setColor("#ff0000")
-    .setTitle("🔴 Member Left")
-    .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
-    .addFields(
-      { name: "👤 User", value: `<@${member.id}>`, inline: true },
-      { name: "🆔 ID", value: member.id, inline: true },
-    )
-    .setTimestamp();
-
-  channel.send({ embeds: [embed] });
-});
-
-// BAN
-client.on("guildBanAdd", ban => {
-  const channel = ban.guild.channels.cache.find(c => c.name === "ban-logs");
-  if (!channel) return;
-
-  const embed = new EmbedBuilder()
-    .setColor("#8B0000")
-    .setTitle("🔨 User Banned")
-    .setThumbnail(ban.user.displayAvatarURL({ dynamic: true }))
-    .addFields(
-      { name: "👤 User", value: `<@${ban.user.id}>`, inline: true },
-      { name: "🆔 ID", value: ban.user.id, inline: true },
-    )
-    .setTimestamp();
-
-  channel.send({ embeds: [embed] });
-});
-
-// UNBAN
-client.on("guildBanRemove", ban => {
-  const channel = ban.guild.channels.cache.find(c => c.name === "unban-logs");
-  if (!channel) return;
-
-  const embed = new EmbedBuilder()
-    .setColor("#00ffcc")
-    .setTitle("♻️ User Unbanned")
-    .setThumbnail(ban.user.displayAvatarURL({ dynamic: true }))
-    .addFields(
-      { name: "👤 User", value: `<@${ban.user.id}>`, inline: true },
-      { name: "🆔 ID", value: ban.user.id, inline: true },
-    )
-    .setTimestamp();
-
-  channel.send({ embeds: [embed] });
-});
-
-// TIMEOUT
-client.on("guildMemberUpdate", (oldMember, newMember) => {
-  if (!oldMember.communicationDisabledUntil && newMember.communicationDisabledUntil) {
-
-    const channel = newMember.guild.channels.cache.find(c => c.name === "timeout-logs");
-    if (!channel) return;
+    const panelChannel = newState.guild.channels.cache.find(c => c.name === "interface");
+    if (!panelChannel) return;
 
     const embed = new EmbedBuilder()
-      .setColor("#ff9900")
-      .setTitle("⏳ User Timed Out")
-      .setThumbnail(newMember.user.displayAvatarURL({ dynamic: true }))
-      .addFields(
-        { name: "👤 User", value: `<@${newMember.id}>`, inline: true },
-        { name: "🆔 ID", value: newMember.id, inline: true },
-      )
+      .setColor("#8A2BE2")
+      .setTitle("🎛 Voice Control Panel")
+      .setDescription("تحكم في رومك الصوتي من هنا")
+      .addFields({ name: "🎤 Channel", value: channel.name })
       .setTimestamp();
 
-    channel.send({ embeds: [embed] });
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`lock_${channel.id}`).setLabel("🔒 Lock").setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId(`unlock_${channel.id}`).setLabel("🔓 Unlock").setStyle(ButtonStyle.Success),
+      new ButtonBuilder().setCustomId(`rename_${channel.id}`).setLabel("✏ Rename").setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId(`limit_${channel.id}`).setLabel("👥 Limit 4").setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId(`kick_${channel.id}`).setLabel("👢 Kick All").setStyle(ButtonStyle.Danger)
+    );
+
+    panelChannel.send({ embeds: [embed], components: [row] });
+  }
+
+  if (oldState.channel && oldState.channel.members.size === 0) {
+    if (voiceOwners.has(oldState.channel.id)) {
+      oldState.channel.delete().catch(() => {});
+      voiceOwners.delete(oldState.channel.id);
+    }
   }
 });
 
-// KICK
-client.on("guildMemberRemove", async member => {
-  const logs = await member.guild.fetchAuditLogs({
-    limit: 1,
-    type: AuditLogEvent.MemberKick
-  });
+/* ================= VOICE BUTTONS ================= */
 
-  const log = logs.entries.first();
-  if (!log) return;
-  if (log.target.id !== member.id) return;
+client.on("interactionCreate", async interaction => {
+  if (!interaction.isButton()) return;
 
-  const channel = member.guild.channels.cache.find(c => c.name === "kick-logs");
+  const [action, channelId] = interaction.customId.split("_");
+  if (!voiceOwners.has(channelId)) return;
+
+  const channel = interaction.guild.channels.cache.get(channelId);
   if (!channel) return;
 
-  const embed = new EmbedBuilder()
-    .setColor("#ffaa00")
-    .setTitle("👢 User Kicked")
-    .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
-    .addFields(
-      { name: "👤 User", value: `<@${member.id}>`, inline: true },
-      { name: "👮 By", value: `<@${log.executor.id}>`, inline: true },
-    )
-    .setTimestamp();
+  if (voiceOwners.get(channelId) !== interaction.user.id)
+    return interaction.reply({ content: "❌ هذا موش رومك", ephemeral: true });
 
-  channel.send({ embeds: [embed] });
+  if (action === "lock") {
+    await channel.permissionOverwrites.edit(interaction.guild.id, { Connect: false });
+    return interaction.reply({ content: "🔒 تم قفل الروم", ephemeral: true });
+  }
+
+  if (action === "unlock") {
+    await channel.permissionOverwrites.edit(interaction.guild.id, { Connect: true });
+    return interaction.reply({ content: "🔓 تم فتح الروم", ephemeral: true });
+  }
+
+  if (action === "rename") {
+    await channel.setName(`🎤 ${interaction.user.username}`);
+    return interaction.reply({ content: "✏ تم تغيير الاسم", ephemeral: true });
+  }
+
+  if (action === "limit") {
+    await channel.setUserLimit(4);
+    return interaction.reply({ content: "👥 تم تحديد الحد بـ 4", ephemeral: true });
+  }
+
+  if (action === "kick") {
+    channel.members.forEach(member => {
+      if (member.id !== interaction.user.id)
+        member.voice.disconnect().catch(() => {});
+    });
+    return interaction.reply({ content: "👢 تم طرد الجميع", ephemeral: true });
+  }
 });
 
 /* ================= WEB SERVER ================= */
