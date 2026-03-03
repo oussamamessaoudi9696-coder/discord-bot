@@ -19,12 +19,12 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildModeration,
-    GatewayIntentBits.GuildVoiceStates // ✅ مضافة
+    GatewayIntentBits.GuildVoiceStates
   ]
 });
 
 const spamMap = new Map();
-const voiceOwners = new Map(); // ✅ مضافة
+const voiceOwners = new Map();
 
 client.once("ready", () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
@@ -154,12 +154,12 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
-/* ================= VOICE GENERATOR SYSTEM ================= */
+/* ================= VOICE GENERATOR + AUTO DELETE ================= */
 
 client.on("voiceStateUpdate", async (oldState, newState) => {
-  if (!newState.channel) return;
 
-  if (newState.channel.name === "Generator") {
+  // ===== CREATE PRIVATE VOICE =====
+  if (newState.channel && newState.channel.name === "Generator") {
 
     const channel = await newState.guild.channels.create({
       name: `🎤 ${newState.member.user.username}`,
@@ -171,46 +171,41 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
     await newState.member.voice.setChannel(channel);
 
     const panelChannel = newState.guild.channels.cache.find(c => c.name === "interface");
-    if (!panelChannel) return;
+    if (panelChannel) {
 
-    const embed = new EmbedBuilder()
-      .setColor("#8A2BE2")
-      .setTitle("🎛 Voice Control Panel")
-      .setDescription("تحكم في رومك الصوتي من هنا")
-      .addFields({ name: "🎤 Channel", value: channel.name })
-      .setTimestamp();
+      const embed = new EmbedBuilder()
+        .setColor("#8A2BE2")
+        .setTitle("🎛 Voice Control Panel")
+        .setDescription("تحكم في رومك الصوتي من هنا")
+        .addFields({ name: "🎤 Channel", value: channel.name })
+        .setTimestamp();
 
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId(`lock_${channel.id}`).setLabel("🔒 Lock").setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder().setCustomId(`unlock_${channel.id}`).setLabel("🔓 Unlock").setStyle(ButtonStyle.Success),
-      new ButtonBuilder().setCustomId(`rename_${channel.id}`).setLabel("✏ Rename").setStyle(ButtonStyle.Primary),
-      new ButtonBuilder().setCustomId(`limit_${channel.id}`).setLabel("👥 Limit 4").setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder().setCustomId(`kick_${channel.id}`).setLabel("👢 Kick All").setStyle(ButtonStyle.Danger)
-    );
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId(`lock_${channel.id}`).setLabel("🔒 Lock").setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId(`unlock_${channel.id}`).setLabel("🔓 Unlock").setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId(`rename_${channel.id}`).setLabel("✏ Rename").setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId(`limit_${channel.id}`).setLabel("👥 Limit 4").setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId(`kick_${channel.id}`).setLabel("👢 Kick All").setStyle(ButtonStyle.Danger)
+      );
 
-    panelChannel.send({ embeds: [embed], components: [row] });
+      panelChannel.send({ embeds: [embed], components: [row] });
+    }
   }
-  
-  // DELETE PRIVATE VOICE IF EMPTY (RELIABLE)
-client.on("voiceStateUpdate", async (oldState, newState) => {
 
-  // نتأكدو الروم القديم موجود
-  if (oldState.channel) {
+  // ===== AUTO DELETE EMPTY VOICE =====
+  if (oldState.channel && oldState.channel.type === ChannelType.GuildVoice) {
 
-    // ما نحذفوش Generator نفسه
+    // لا تمسح Generator نفسه
     if (oldState.channel.name === "Generator") return;
 
-    // إذا الروم صوتي وفاضي
-    if (oldState.channel.type === ChannelType.GuildVoice && oldState.channel.members.size === 0) {
-
-      // نستنى شوية (500ms) باش يكون event كامل
-      setTimeout(() => {
-        if (oldState.channel.members.size === 0) {
-          oldState.channel.delete().catch(() => {});
-          voiceOwners.delete(oldState.channel.id); // نحذفو من القائمة
-        }
-      }, 500);
-    }
+    // نستنى 500ms باش يتأكد كل شيء
+    setTimeout(() => {
+      if (oldState.channel.members.size === 0) {
+        oldState.channel.delete().catch(() => {});
+        voiceOwners.delete(oldState.channel.id);
+      }
+    }, 500);
+  }
 
 });
 
