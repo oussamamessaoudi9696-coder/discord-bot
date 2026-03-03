@@ -191,12 +191,24 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
     panelChannel.send({ embeds: [embed], components: [row] });
   }
 
-  if (oldState.channel && oldState.channel.members.size === 0) {
-    if (voiceOwners.has(oldState.channel.id)) {
-      oldState.channel.delete().catch(() => {});
-      voiceOwners.delete(oldState.channel.id);
-    }
+  // DELETE PRIVATE VOICE IF EMPTY
+if (oldState.channel) {
+
+  const channel = oldState.channel;
+
+  // كان الروم معمول من السيستام متاعنا
+  if (voiceOwners.has(channel.id)) {
+
+    // نستنى ثانية صغيرة باش يتأكد اللي ماعادش فيه حتى حد
+    setTimeout(() => {
+      if (channel.members.size === 0) {
+        channel.delete().catch(() => {});
+        voiceOwners.delete(channel.id);
+      }
+    }, 1000);
+
   }
+}
 });
 
 /* ================= VOICE BUTTONS ================= */
