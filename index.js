@@ -154,7 +154,7 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
-/* ================= VOICE GENERATOR + AUTO DELETE ================= */
+/* ================= VOICE GENERATOR + SAFE DELETE ================= */
 
 client.on("voiceStateUpdate", async (oldState, newState) => {
 
@@ -192,13 +192,12 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
     }
   }
 
-  // ===== AUTO DELETE EMPTY VOICE =====
+  // ===== AUTO DELETE ONLY GENERATED VOICE =====
   if (oldState.channel && oldState.channel.type === ChannelType.GuildVoice) {
 
-    // لا تمسح Generator نفسه
-    if (oldState.channel.name === "Generator") return;
+    // نمسحو كان الروم معمول من البوت
+    if (!voiceOwners.has(oldState.channel.id)) return;
 
-    // نستنى 500ms باش يتأكد كل شيء
     setTimeout(() => {
       if (oldState.channel.members.size === 0) {
         oldState.channel.delete().catch(() => {});
