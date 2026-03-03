@@ -32,11 +32,12 @@ client.once("ready", () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
 });
 
-/* ================= ANTI LINK + SPAM ================= */
+/* ================= ANTI LINK + SPAM + COMMANDS ================= */
 
 client.on("messageCreate", async (message) => {
   if (!message.guild || message.author.bot) return;
 
+  // Anti Link
   if (message.content.includes("http")) {
     if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
       await message.delete().catch(() => {});
@@ -44,6 +45,7 @@ client.on("messageCreate", async (message) => {
     }
   }
 
+  // Anti Spam
   const data = spamMap.get(message.author.id) || { count: 0 };
   data.count++;
   spamMap.set(message.author.id, data);
@@ -55,14 +57,14 @@ client.on("messageCreate", async (message) => {
     return message.channel.send("🚫 Stop Spam!");
   }
 
-  /* TICKET PANEL */
+  // Ticket Panel
   if (message.content === "!ticketpanel") {
     if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator))
       return message.reply("❌ Admin only");
 
     const embed = new EmbedBuilder()
       .setColor("#00ff99")
-      .setTitle("🎮 Gaming Community Support")
+      .setTitle("🎮 Support System")
       .setDescription("اضغط لفتح تذكرة 🎟️")
       .setTimestamp();
 
@@ -76,7 +78,7 @@ client.on("messageCreate", async (message) => {
     return message.channel.send({ embeds: [embed], components: [row] });
   }
 
-  /* ANNOUNCEMENT */
+  // Announcement
   if (message.content.startsWith("+message")) {
     if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator))
       return message.reply("❌ Admin only");
@@ -97,16 +99,20 @@ client.on("messageCreate", async (message) => {
   }
 });
 
-/* ================= TICKET SYSTEM ================= */
+/* ================= INTERACTIONS ================= */
 
 client.on("interactionCreate", async interaction => {
+
   if (!interaction.isButton()) return;
+
+  /* ===== TICKET ===== */
 
   if (interaction.customId === "create_ticket") {
 
     const existing = interaction.guild.channels.cache.find(
       c => c.name === `ticket-${interaction.user.id}`
     );
+
     if (existing)
       return interaction.reply({ content: "❌ عندك تذكرة مفتوحة", ephemeral: true });
 
@@ -126,13 +132,42 @@ client.on("interactionCreate", async interaction => {
         .setStyle(ButtonStyle.Danger)
     );
 
-    channel.send({ content: `👋 مرحبا ${interaction.user}`, components: [row] });
+    await channel.send({ content: `👋 مرحبا ${interaction.user}`, components: [row] });
     return interaction.reply({ content: "✅ تم إنشاء التذكرة", ephemeral: true });
   }
 
   if (interaction.customId === "close_ticket") {
-    await interaction.reply("🔒 سيتم الغلق بعد 5 ثواني...");
+    await interaction.reply({ content: "🔒 سيتم الغلق بعد 5 ثواني...", ephemeral: true });
     setTimeout(() => interaction.channel.delete().catch(()=>{}), 5000);
+  }
+
+  /* ===== VOICE CONTROL PANEL ===== */
+
+  const channel = interaction.member.voice.channel;
+  if (!channel) return;
+
+  if (!voiceOwners.has(channel.id)) return;
+  if (voiceOwners.get(channel.id) !== interaction.user.id)
+    return interaction.reply({ content: "❌ موش رومك", ephemeral: true });
+
+  if (interaction.customId === "lock_voice") {
+    await channel.permissionOverwrites.edit(interaction.guild.id, { Connect: false });
+    return interaction.reply({ content: "🔒 تم القفل", ephemeral: true });
+  }
+
+  if (interaction.customId === "unlock_voice") {
+    await channel.permissionOverwrites.edit(interaction.guild.id, { Connect: null });
+    return interaction.reply({ content: "🔓 تم الفتح", ephemeral: true });
+  }
+
+  if (interaction.customId === "limit_voice") {
+    await channel.setUserLimit(2);
+    return interaction.reply({ content: "👥 Limit = 2", ephemeral: true });
+  }
+
+  if (interaction.customId === "rename_voice") {
+    await channel.setName(`🎤 ${interaction.user.username}-room`);
+    return interaction.reply({ content: "✏ تم تغيير الاسم", ephemeral: true });
   }
 });
 
@@ -140,7 +175,6 @@ client.on("interactionCreate", async interaction => {
 
 client.on("voiceStateUpdate", async (oldState, newState) => {
 
-  // إنشاء روم خاص
   if (newState.channel && newState.channel.name === "Generator") {
 
     const channel = await newState.guild.channels.create({
@@ -151,9 +185,29 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
 
     voiceOwners.set(channel.id, newState.member.id);
     await newState.member.voice.setChannel(channel);
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId("lock_voice")
+        .setLabel("🔒 Lock")
+        .setStyle(ButtonStyle.Danger),
+      new ButtonBuilder()
+        .setCustomId("unlock_voice")
+        .setLabel("🔓 Unlock")
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId("limit_voice")
+        .setLabel("👥 Limit 2")
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId("rename_voice")
+        .setLabel("✏ Rename")
+        .setStyle(ButtonStyle.Secondary)
+    );
+
+    channel.send({ content: "🎛 Voice Control Panel", components: [row] });
   }
 
-  // حذف فقط الرومات اللي عملهم البوت
   if (oldState.channel && voiceOwners.has(oldState.channel.id)) {
     setTimeout(() => {
       if (oldState.channel.members.size === 0) {
@@ -172,99 +226,26 @@ function getLogChannel(guild, name) {
   );
 }
 
-/* JOIN */
 client.on("guildMemberAdd", member => {
   const ch = getLogChannel(member.guild, "join-players-logs");
   if (!ch) return;
 
-  const embed = new EmbedBuilder()
+  ch.send({ embeds: [new EmbedBuilder()
     .setColor("Green")
     .setTitle("🟢 Player Joined")
-    .addFields({ name: "User", value: member.user.tag })
-    .setTimestamp();
-
-  ch.send({ embeds: [embed] });
+    .setDescription(member.user.tag)
+    .setTimestamp()] });
 });
 
-/* LEAVE + KICK */
-client.on("guildMemberRemove", async member => {
+client.on("guildMemberRemove", member => {
+  const ch = getLogChannel(member.guild, "left-player-logs");
+  if (!ch) return;
 
-  const logs = await member.guild.fetchAuditLogs({ limit: 1, type: AuditLogEvent.MemberKick }).catch(()=>{});
-  const log = logs?.entries.first();
-
-  if (log && log.target.id === member.id && Date.now() - log.createdTimestamp < 5000) {
-
-    const kickChannel = getLogChannel(member.guild, "kick-logs");
-    if (!kickChannel) return;
-
-    const embed = new EmbedBuilder()
-      .setColor("Orange")
-      .setTitle("🔨 Member Kicked")
-      .addFields(
-        { name: "User", value: member.user.tag },
-        { name: "By", value: log.executor.tag }
-      )
-      .setTimestamp();
-
-    return kickChannel.send({ embeds: [embed] });
-  }
-
-  const leaveChannel = getLogChannel(member.guild, "left-player-logs");
-  if (!leaveChannel) return;
-
-  const embed = new EmbedBuilder()
+  ch.send({ embeds: [new EmbedBuilder()
     .setColor("Red")
     .setTitle("🔴 Player Left")
-    .addFields({ name: "User", value: member.user.tag })
-    .setTimestamp();
-
-  leaveChannel.send({ embeds: [embed] });
-});
-
-/* BAN */
-client.on("guildBanAdd", async ban => {
-  const ch = getLogChannel(ban.guild, "ban-logs");
-  if (!ch) return;
-
-  const embed = new EmbedBuilder()
-    .setColor("DarkRed")
-    .setTitle("🚫 Member Banned")
-    .addFields({ name: "User", value: ban.user.tag })
-    .setTimestamp();
-
-  ch.send({ embeds: [embed] });
-});
-
-/* UNBAN */
-client.on("guildBanRemove", ban => {
-  const ch = getLogChannel(ban.guild, "unban-logs");
-  if (!ch) return;
-
-  const embed = new EmbedBuilder()
-    .setColor("Blue")
-    .setTitle("🔓 Member Unbanned")
-    .addFields({ name: "User", value: ban.user.tag })
-    .setTimestamp();
-
-  ch.send({ embeds: [embed] });
-});
-
-/* TIMEOUT */
-client.on("guildMemberUpdate", async (oldMember, newMember) => {
-
-  if (oldMember.communicationDisabledUntil === newMember.communicationDisabledUntil) return;
-  if (!newMember.communicationDisabledUntil) return;
-
-  const ch = getLogChannel(newMember.guild, "timeout-logs");
-  if (!ch) return;
-
-  const embed = new EmbedBuilder()
-    .setColor("Purple")
-    .setTitle("⏳ Member Timed Out")
-    .addFields({ name: "User", value: newMember.user.tag })
-    .setTimestamp();
-
-  ch.send({ embeds: [embed] });
+    .setDescription(member.user.tag)
+    .setTimestamp()] });
 });
 
 /* ================= WEB SERVER ================= */
