@@ -26,6 +26,8 @@ const client = new Client({
 const spamMap = new Map();
 const voiceOwners = new Map();
 
+/* ================= READY ================= */
+
 client.once("ready", () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
 });
@@ -42,57 +44,52 @@ client.on("messageCreate", async (message) => {
     }
   }
 
-  const userData = spamMap.get(message.author.id) || { count: 0 };
-  userData.count++;
-  spamMap.set(message.author.id, userData);
+  const data = spamMap.get(message.author.id) || { count: 0 };
+  data.count++;
+  spamMap.set(message.author.id, data);
 
-  setTimeout(() => {
-    userData.count = 0;
-  }, 5000);
+  setTimeout(() => data.count = 0, 5000);
 
-  if (userData.count >= 5) {
-    await message.delete().catch(() => {});
+  if (data.count >= 5) {
+    await message.delete().catch(()=>{});
     return message.channel.send("🚫 Stop Spam!");
   }
 
-  /* ================= TICKET PANEL ================= */
-
-  if (message.content === "!ticketpanel" && !message.channel.name.startsWith("ticket-")) {
+  /* TICKET PANEL */
+  if (message.content === "!ticketpanel") {
     if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator))
       return message.reply("❌ Admin only");
 
     const embed = new EmbedBuilder()
       .setColor("#00ff99")
       .setTitle("🎮 Gaming Community Support")
-      .setDescription("اضغط على الزر لفتح تذكرة 🎟️")
-      .setFooter({ text: "Gaming Community © 2026" })
+      .setDescription("اضغط لفتح تذكرة 🎟️")
       .setTimestamp();
 
-    const button = new ButtonBuilder()
-      .setCustomId("create_ticket")
-      .setLabel("🎫 Open Ticket")
-      .setStyle(ButtonStyle.Success);
-
-    const row = new ActionRowBuilder().addComponents(button);
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId("create_ticket")
+        .setLabel("🎫 Open Ticket")
+        .setStyle(ButtonStyle.Success)
+    );
 
     return message.channel.send({ embeds: [embed], components: [row] });
   }
 
-  /* ================= ANNOUNCEMENT ================= */
-
+  /* ANNOUNCEMENT */
   if (message.content.startsWith("+message")) {
     if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator))
       return message.reply("❌ Admin only");
 
-    const args = message.content.slice(8).trim();
-    if (!args) return message.reply("❌ اكتب النص بعد +message");
+    const text = message.content.slice(8).trim();
+    if (!text) return message.reply("❌ اكتب النص بعد +message");
 
-    await message.delete().catch(() => {});
+    await message.delete().catch(()=>{});
 
     const embed = new EmbedBuilder()
       .setColor("#5865F2")
       .setTitle("📢 Announcement")
-      .setDescription(args)
+      .setDescription(text)
       .setFooter({ text: `By: ${message.author.tag}` })
       .setTimestamp();
 
@@ -100,16 +97,16 @@ client.on("messageCreate", async (message) => {
   }
 });
 
-/* ================= TICKET BUTTONS ================= */
+/* ================= TICKET SYSTEM ================= */
 
-client.on("interactionCreate", async (interaction) => {
+client.on("interactionCreate", async interaction => {
   if (!interaction.isButton()) return;
 
   if (interaction.customId === "create_ticket") {
+
     const existing = interaction.guild.channels.cache.find(
       c => c.name === `ticket-${interaction.user.id}`
     );
-
     if (existing)
       return interaction.reply({ content: "❌ عندك تذكرة مفتوحة", ephemeral: true });
 
@@ -117,48 +114,33 @@ client.on("interactionCreate", async (interaction) => {
       name: `ticket-${interaction.user.id}`,
       type: ChannelType.GuildText,
       permissionOverwrites: [
-        {
-          id: interaction.guild.id,
-          deny: [PermissionsBitField.Flags.ViewChannel]
-        },
-        {
-          id: interaction.user.id,
-          allow: [
-            PermissionsBitField.Flags.ViewChannel,
-            PermissionsBitField.Flags.SendMessages
-          ]
-        }
+        { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+        { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
       ]
     });
 
-    const closeButton = new ButtonBuilder()
-      .setCustomId("close_ticket")
-      .setLabel("🔒 Close Ticket")
-      .setStyle(ButtonStyle.Danger);
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId("close_ticket")
+        .setLabel("🔒 Close Ticket")
+        .setStyle(ButtonStyle.Danger)
+    );
 
-    const row = new ActionRowBuilder().addComponents(closeButton);
-
-    channel.send({
-      content: `👋 مرحبا ${interaction.user} اكتب مشكلتك هنا`,
-      components: [row]
-    });
-
-    interaction.reply({ content: "✅ تم إنشاء التذكرة", ephemeral: true });
+    channel.send({ content: `👋 مرحبا ${interaction.user}`, components: [row] });
+    return interaction.reply({ content: "✅ تم إنشاء التذكرة", ephemeral: true });
   }
 
   if (interaction.customId === "close_ticket") {
-    await interaction.reply("🔒 سيتم غلق التذكرة بعد 5 ثواني...");
-    setTimeout(() => {
-      interaction.channel.delete().catch(() => {});
-    }, 5000);
+    await interaction.reply("🔒 سيتم الغلق بعد 5 ثواني...");
+    setTimeout(() => interaction.channel.delete().catch(()=>{}), 5000);
   }
 });
 
-/* ================= VOICE GENERATOR + SAFE DELETE ================= */
+/* ================= VOICE GENERATOR ================= */
 
 client.on("voiceStateUpdate", async (oldState, newState) => {
 
-  // ===== CREATE PRIVATE VOICE =====
+  // إنشاء روم خاص
   if (newState.channel && newState.channel.name === "Generator") {
 
     const channel = await newState.guild.channels.create({
@@ -169,92 +151,87 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
 
     voiceOwners.set(channel.id, newState.member.id);
     await newState.member.voice.setChannel(channel);
-
-    const panelChannel = newState.guild.channels.cache.find(c => c.name === "interface");
-    if (panelChannel) {
-
-      const embed = new EmbedBuilder()
-        .setColor("#8A2BE2")
-        .setTitle("🎛 Voice Control Panel")
-        .setDescription("تحكم في رومك الصوتي من هنا")
-        .addFields({ name: "🎤 Channel", value: channel.name })
-        .setTimestamp();
-
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`lock_${channel.id}`).setLabel("🔒 Lock").setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId(`unlock_${channel.id}`).setLabel("🔓 Unlock").setStyle(ButtonStyle.Success),
-        new ButtonBuilder().setCustomId(`rename_${channel.id}`).setLabel("✏ Rename").setStyle(ButtonStyle.Primary),
-        new ButtonBuilder().setCustomId(`limit_${channel.id}`).setLabel("👥 Limit 4").setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId(`kick_${channel.id}`).setLabel("👢 Kick All").setStyle(ButtonStyle.Danger)
-      );
-
-      panelChannel.send({ embeds: [embed], components: [row] });
-    }
   }
 
-  // ===== AUTO DELETE ONLY GENERATED VOICE =====
-  if (oldState.channel && oldState.channel.type === ChannelType.GuildVoice) {
-
-    // نمسحو كان الروم معمول من البوت
-    if (!voiceOwners.has(oldState.channel.id)) return;
-
+  // حذف الرومات الخاصة فقط
+  if (oldState.channel && voiceOwners.has(oldState.channel.id)) {
     setTimeout(() => {
       if (oldState.channel.members.size === 0) {
-        oldState.channel.delete().catch(() => {});
+        oldState.channel.delete().catch(()=>{});
         voiceOwners.delete(oldState.channel.id);
       }
     }, 500);
   }
-
 });
 
-/* ================= VOICE BUTTONS ================= */
+/* ================= LOG SYSTEM ================= */
 
-client.on("interactionCreate", async interaction => {
-  if (!interaction.isButton()) return;
+function getLogChannel(guild, name) {
+  return guild.channels.cache.find(c => c.name === name);
+}
 
-  const [action, channelId] = interaction.customId.split("_");
-  if (!voiceOwners.has(channelId)) return;
+/* JOIN */
+client.on("guildMemberAdd", member => {
+  const ch = getLogChannel(member.guild, "Join-Players-Logs");
+  if (!ch) return;
 
-  const channel = interaction.guild.channels.cache.get(channelId);
-  if (!channel) return;
+  const embed = new EmbedBuilder()
+    .setColor("Green")
+    .setTitle("🟢 Player Joined")
+    .setThumbnail(member.user.displayAvatarURL())
+    .addFields(
+      { name: "User", value: member.user.tag },
+      { name: "ID", value: member.id }
+    )
+    .setTimestamp();
 
-  if (voiceOwners.get(channelId) !== interaction.user.id)
-    return interaction.reply({ content: "❌ هذا موش رومك", ephemeral: true });
-
-  if (action === "lock") {
-    await channel.permissionOverwrites.edit(interaction.guild.id, { Connect: false });
-    return interaction.reply({ content: "🔒 تم قفل الروم", ephemeral: true });
-  }
-
-  if (action === "unlock") {
-    await channel.permissionOverwrites.edit(interaction.guild.id, { Connect: true });
-    return interaction.reply({ content: "🔓 تم فتح الروم", ephemeral: true });
-  }
-
-  if (action === "rename") {
-    await channel.setName(`🎤 ${interaction.user.username}`);
-    return interaction.reply({ content: "✏ تم تغيير الاسم", ephemeral: true });
-  }
-
-  if (action === "limit") {
-    await channel.setUserLimit(4);
-    return interaction.reply({ content: "👥 تم تحديد الحد بـ 4", ephemeral: true });
-  }
-
-  if (action === "kick") {
-    channel.members.forEach(member => {
-      if (member.id !== interaction.user.id)
-        member.voice.disconnect().catch(() => {});
-    });
-    return interaction.reply({ content: "👢 تم طرد الجميع", ephemeral: true });
-  }
+  ch.send({ embeds: [embed] });
 });
 
-/* ================= WEB SERVER ================= */
+/* LEAVE */
+client.on("guildMemberRemove", member => {
+  const ch = getLogChannel(member.guild, "Left-Player-Logs");
+  if (!ch) return;
+
+  const embed = new EmbedBuilder()
+    .setColor("Red")
+    .setTitle("🔴 Player Left")
+    .addFields({ name: "User", value: member.user.tag })
+    .setTimestamp();
+
+  ch.send({ embeds: [embed] });
+});
+
+/* BAN */
+client.on("guildBanAdd", ban => {
+  const ch = getLogChannel(ban.guild, "Ban-Logs");
+  if (!ch) return;
+
+  const embed = new EmbedBuilder()
+    .setColor("DarkRed")
+    .setTitle("🚫 Member Banned")
+    .addFields({ name: "User", value: ban.user.tag })
+    .setTimestamp();
+
+  ch.send({ embeds: [embed] });
+});
+
+/* UNBAN */
+client.on("guildBanRemove", ban => {
+  const ch = getLogChannel(ban.guild, "Unban-Logs");
+  if (!ch) return;
+
+  const embed = new EmbedBuilder()
+    .setColor("Blue")
+    .setTitle("🔓 Member Unbanned")
+    .addFields({ name: "User", value: ban.user.tag })
+    .setTimestamp();
+
+  ch.send({ embeds: [embed] });
+});
 
 const app = express();
 app.get("/", (req, res) => res.send("Bot is alive!"));
-app.listen(3000, () => console.log("🌐 Web server running"));
+app.listen(3000);
 
 client.login(process.env.TOKEN);
