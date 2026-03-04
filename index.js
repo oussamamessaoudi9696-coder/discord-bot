@@ -41,7 +41,7 @@ client.on("messageCreate", async (message) => {
   if (message.content.includes("http")) {
     if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
       await message.delete().catch(() => {});
-      return message.channel.send("🚫 الروابط ممنوعة هنا");
+      return message.channel.send("🚫 no line");
     }
   }
 
@@ -205,7 +205,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
         .setStyle(ButtonStyle.Secondary)
     );
 
-    channel.send({ content: "🎛 Voice Control Panel", components: [row] });
+    channel.send({ content: "Voice Control Panel", components: [row] });
   }
 
   if (oldState.channel && voiceOwners.has(oldState.channel.id)) {
