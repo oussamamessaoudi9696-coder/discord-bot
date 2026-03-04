@@ -41,7 +41,7 @@ client.on("messageCreate", async (message) => {
   if (message.content.includes("http")) {
     if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
       await message.delete().catch(() => {});
-      return message.channel.send("🚫 no line");
+      return message.channel.send("🚫 no line 🤝");
     }
   }
 
