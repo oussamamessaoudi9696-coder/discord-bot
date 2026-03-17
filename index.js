@@ -137,7 +137,7 @@ client.on("messageCreate", async message => {
   if (message.content.includes("http")) {
     if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
       await message.delete().catch(() => {});
-      return message.channel.send("🚫 الروابط ممنوعة هنا");
+      return message.channel.send("🚫 Anti link");
     }
   }
 
